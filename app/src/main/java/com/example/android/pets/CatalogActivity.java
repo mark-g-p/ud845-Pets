@@ -20,6 +20,8 @@ import com.example.android.pets.data.PetDbHelper;
  */
 public class CatalogActivity extends AppCompatActivity {
 
+    PetDbHelper dbHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,7 +36,7 @@ public class CatalogActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-
+        dbHelper = new PetDbHelper(this);
         displayDatabaseInfo();
     }
 
@@ -45,7 +47,6 @@ public class CatalogActivity extends AppCompatActivity {
     private void displayDatabaseInfo() {
         // To access our database, we instantiate our subclass of SQLiteOpenHelper
         // and pass the context, which is the current activity.
-        PetDbHelper dbHelper = new PetDbHelper(this);
 
         // Create and/or open a database to read from it
         SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -97,7 +98,6 @@ public class CatalogActivity extends AppCompatActivity {
         int gender = 1;
         int weight = 7;
         // Gets the data repository in write mode
-        PetDbHelper dbHelper = new PetDbHelper(this);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
 
 // Create a new map of values, where column names are the keys
