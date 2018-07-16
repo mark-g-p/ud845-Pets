@@ -4,7 +4,7 @@ import android.net.Uri;
 import android.provider.BaseColumns;
 
 public class PetContract {
-    private static final String CONTENT_AUTHORITY = "com.example.android.pets";
+    static final String CONTENT_AUTHORITY = "com.example.android.pets";
     static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
     static final String PATH_PETS = "pets";
 
