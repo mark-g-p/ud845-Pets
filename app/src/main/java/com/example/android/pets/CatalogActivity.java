@@ -3,7 +3,6 @@ package com.example.android.pets;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -11,14 +10,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.android.pets.data.PetContract.PetEntry;
-import com.example.android.pets.data.PetDbHelper;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -26,7 +20,6 @@ import java.util.Locale;
  */
 public class CatalogActivity extends AppCompatActivity {
 
-    PetDbHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,36 +35,27 @@ public class CatalogActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-        dbHelper = new PetDbHelper(this);
     }
 
     @Override
-    protected void onStart(){
+    protected void onStart() {
         super.onStart();
         displayDatabaseInfo();
     }
+
     /**
      * Temporary helper method to display information in the onscreen TextView about the state of
      * the pets database.
      */
     private void displayDatabaseInfo() {
-        // To access our database, we instantiate our subclass of SQLiteOpenHelper
-        // and pass the context, which is the current activity.
+//      List of used columns
+        String[] projection = {PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED,
+                PetEntry.COLUMN_PET_GENDER,
+                PetEntry.COLUMN_PET_WEIGHT};
+        Cursor cursor = getContentResolver().query(PetEntry.CONTENT_URI, projection, null, null, null);
 
-        // Create and/or open a database to read from it
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-
-        // Perform this raw SQL query "SELECT * FROM pets"
-        // to get a Cursor that contains all rows from the pets table.
-//        Cursor cursor = db.rawQuery("SELECT * FROM " + PetEntry.TABLE_NAME, null);
-        Cursor cursor = db.query(PetEntry.TABLE_NAME, // The table to query
-                null,             // The array of columns to return (pass null to get all)
-                null,              // The columns for the WHERE clause
-                null,          // The values for the WHERE clause
-                null,                   // don't group the rows
-                null,                   // don't filter by row groups
-                null               // The sort order
-        );
         TextView displayView = findViewById(R.id.text_view_pet);
 
         try {
@@ -84,13 +68,8 @@ public class CatalogActivity extends AppCompatActivity {
             // the information from each column in this order.
             displayView.setText("The pets table contains " + cursor.getCount() + " pets.\n\n");
             String headerRow = "\n %s - %s - %s - %s - %s";
-            headerRow = String.format(Locale.getDefault(),
-                    headerRow,
-                    PetEntry._ID,
-                    PetEntry.COLUMN_PET_NAME,
-                    PetEntry.COLUMN_PET_BREED,
-                    PetEntry.COLUMN_PET_GENDER,
-                    PetEntry.COLUMN_PET_WEIGHT);
+            headerRow = String.format(Locale.getDefault(), headerRow, (Object[]) projection);
+
             displayView.append(headerRow)
             ;
             // Figure out the index of each column
@@ -110,14 +89,17 @@ public class CatalogActivity extends AppCompatActivity {
                         cursor.getString(breedColumnIndex),
                         cursor.getInt(genderColumnIndex),
                         cursor.getInt(weightColumnIndex)
-                        );
+                );
                 // Display the values from each column of the current row in the cursor in the TextView
                 displayView.append(row);
             }
         } finally {
             // Always close the cursor when you're done reading from it. This releases all its
             // resources and makes it invalid.
-            cursor.close();
+
+            if (cursor != null) {
+                cursor.close();
+            }
         }
         // Always close the cursor when you're done reading from it. This releases all its
         // resources and makes it invalid.
@@ -149,13 +131,11 @@ public class CatalogActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private long insertPet(){
+    private void insertPet() {
         String name = "Toto";
         String breed = "Terrier";
         int gender = 1;
         int weight = 7;
-        // Gets the data repository in write mode
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
 
 // Create a new map of values, where column names are the keys
         ContentValues values = new ContentValues();
@@ -163,8 +143,8 @@ public class CatalogActivity extends AppCompatActivity {
         values.put(PetEntry.COLUMN_PET_BREED, breed);
         values.put(PetEntry.COLUMN_PET_GENDER, gender);
         values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
-// Insert the new row, returning the primary key value of the new row
-        return db.insert(PetEntry.TABLE_NAME, null, values);
+// Insert the new row
+        getContentResolver().insert(PetEntry.CONTENT_URI, values);
 
     }
 }

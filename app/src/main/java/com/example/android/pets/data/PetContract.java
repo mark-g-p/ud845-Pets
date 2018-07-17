@@ -8,10 +8,10 @@ public class PetContract {
     static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
     static final String PATH_PETS = "pets";
 
-    private PetContract(){}
     //  Prevent user from creating object PetContract.
+    private PetContract() {}
 
-    public static final class PetEntry implements BaseColumns{
+    public static final class PetEntry implements BaseColumns {
 
         public static final Uri CONTENT_URI = Uri.withAppendedPath(BASE_CONTENT_URI, PATH_PETS);
 
