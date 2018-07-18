@@ -17,6 +17,7 @@ public class PetContract {
 
         public static final String TABLE_NAME = "pets";
 
+        public static final int NUMBER_OF_ADDITIONAL_COLUMNS = 4;
         public static final String _ID = BaseColumns._ID;
         public static final String COLUMN_PET_NAME = "name";
         public static final String COLUMN_PET_BREED = "breed";

@@ -107,11 +107,11 @@ public class PetProvider extends ContentProvider {
      */
     private boolean isValidData(ContentValues values) {
 //        Data validation,
-//        name cannot be null,
+//        name cannot be null or empty string,
 //        breed can be null,
 //        gender has to be equal to one of { GENDER_MALE, GENDER_FEMALE,GENDER_UNKNOWN} constants
 //        weight can be null, it defaults to 0 inside database, has to be non-negative number
-
+//        check if key exist
         if (values.containsKey(PetEntry.COLUMN_PET_NAME)) {
             String name = values.getAsString(PetEntry.COLUMN_PET_NAME);
             if (name == null || name.isEmpty()) {
@@ -155,6 +155,11 @@ public class PetProvider extends ContentProvider {
      */
     private Uri insertPet(Uri uri, ContentValues values) {
 //    Check if data is valid
+        if (values.size() != PetEntry.NUMBER_OF_ADDITIONAL_COLUMNS) {
+            throw new IllegalArgumentException("Pet inserting requires"
+                    + PetEntry.NUMBER_OF_ADDITIONAL_COLUMNS
+                    +  "values");
+        }
         isValidData(values);
 
         SQLiteDatabase database = dbHelper.getWritableDatabase();
@@ -164,7 +169,9 @@ public class PetProvider extends ContentProvider {
         // return the new URI with the ID appended to the end of it or null if insert failed
         return (id != -1) ? ContentUris.withAppendedId(uri, id) : null;
     }
-
+    /**
+     * Update data with the given ContentValues.
+     */
     @Override
     public int update(Uri uri, ContentValues contentValues, String selection,
                       String[] selectionArgs) {
@@ -208,7 +215,22 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        return 0;
+        // Get writable database
+        SQLiteDatabase database = dbHelper.getWritableDatabase();
+
+        final int match = uriMatcher.match(uri);
+        switch (match) {
+            case PETS:
+                // Delete all rows that match the selection and selection args
+                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+            case PET_ID:
+                // Delete a single row given by the ID in the URI
+                selection = PetEntry._ID + "=?";
+                selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
+                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+            default:
+                throw new IllegalArgumentException("Deletion is not supported for " + uri);
+        }
     }
 
     /**
