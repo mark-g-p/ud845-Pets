@@ -158,7 +158,7 @@ public class PetProvider extends ContentProvider {
         if (values.size() != PetEntry.NUMBER_OF_ADDITIONAL_COLUMNS) {
             throw new IllegalArgumentException("Pet inserting requires"
                     + PetEntry.NUMBER_OF_ADDITIONAL_COLUMNS
-                    +  "values");
+                    + "values");
         }
         isValidData(values);
 
@@ -169,6 +169,7 @@ public class PetProvider extends ContentProvider {
         // return the new URI with the ID appended to the end of it or null if insert failed
         return (id != -1) ? ContentUris.withAppendedId(uri, id) : null;
     }
+
     /**
      * Update data with the given ContentValues.
      */

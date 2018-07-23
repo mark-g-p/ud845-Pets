@@ -10,7 +10,8 @@ public class PetContract {
     static final String PATH_PETS = "pets";
 
     //  Prevent user from creating object PetContract.
-    private PetContract() {}
+    private PetContract() {
+    }
 
     public static final class PetEntry implements BaseColumns {
 
