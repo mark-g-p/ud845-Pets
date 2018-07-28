@@ -7,6 +7,7 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 
 import com.example.android.pets.data.PetContract.PetEntry;
 
@@ -61,7 +62,7 @@ public class PetProvider extends ContentProvider {
      * Perform the query for the given URI. Use the given projection, selection, selection arguments, and sort order.
      */
     @Override
-    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
+    public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs,
                         String sortOrder) {
         // Get readable database
         SQLiteDatabase database = dbHelper.getReadableDatabase();
@@ -99,6 +100,8 @@ public class PetProvider extends ContentProvider {
             default:
                 throw new IllegalArgumentException("Cannot query unknown URI " + uri);
         }
+
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
         return cursor;
     }
 
@@ -139,7 +142,7 @@ public class PetProvider extends ContentProvider {
      * Insert new data into the provider with the given ContentValues.
      */
     @Override
-    public Uri insert(Uri uri, ContentValues contentValues) {
+    public Uri insert(@NonNull Uri uri, ContentValues contentValues) {
         final int match = uriMatcher.match(uri);
         switch (match) {
             case PETS:
@@ -165,6 +168,7 @@ public class PetProvider extends ContentProvider {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
         long id = database.insert(PetEntry.TABLE_NAME, null, values);
 
+        getContext().getContentResolver().notifyChange(uri, null);
         // Once we know the ID of the new row in the table,
         // return the new URI with the ID appended to the end of it or null if insert failed
         return (id != -1) ? ContentUris.withAppendedId(uri, id) : null;
@@ -174,7 +178,7 @@ public class PetProvider extends ContentProvider {
      * Update data with the given ContentValues.
      */
     @Override
-    public int update(Uri uri, ContentValues contentValues, String selection,
+    public int update(@NonNull Uri uri, ContentValues contentValues, String selection,
                       String[] selectionArgs) {
         final int match = uriMatcher.match(uri);
         switch (match) {
@@ -208,6 +212,8 @@ public class PetProvider extends ContentProvider {
         }
 
         SQLiteDatabase database = dbHelper.getWritableDatabase();
+
+        getContext().getContentResolver().notifyChange(uri, null);
         return database.update(PetEntry.TABLE_NAME, values, selection, selectionArgs);
     }
 
@@ -215,30 +221,36 @@ public class PetProvider extends ContentProvider {
      * Delete the data at the given selection and selection arguments.
      */
     @Override
-    public int delete(Uri uri, String selection, String[] selectionArgs) {
+    public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
         // Get writable database
         SQLiteDatabase database = dbHelper.getWritableDatabase();
-
+        int rowsDeleted;
         final int match = uriMatcher.match(uri);
         switch (match) {
             case PETS:
                 // Delete all rows that match the selection and selection args
-                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             case PET_ID:
                 // Delete a single row given by the ID in the URI
                 selection = PetEntry._ID + "=?";
                 selectionArgs = new String[]{String.valueOf(ContentUris.parseId(uri))};
-                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                rowsDeleted = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             default:
                 throw new IllegalArgumentException("Deletion is not supported for " + uri);
         }
+        if (rowsDeleted != 0 ){
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
+        return rowsDeleted;
     }
 
     /**
      * Returns the MIME type of data for the content URI.
      */
     @Override
-    public String getType(Uri uri) {
+    public String getType(@NonNull Uri uri) {
         final int match = uriMatcher.match(uri);
         switch (match) {
             case PETS:

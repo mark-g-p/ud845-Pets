@@ -16,10 +16,14 @@
 package com.example.android.pets;
 
 import android.content.ContentValues;
+import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.NavUtils;
+import android.support.v4.content.CursorLoader;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -29,26 +33,42 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
-import com.example.android.pets.data.PetContract;
 import com.example.android.pets.databinding.ActivityEditorBinding;
+
+import static com.example.android.pets.data.PetContract.PetEntry;
 
 /**
  * Allows user to create a new pet or edit an existing one.
  */
-public class EditorActivity extends AppCompatActivity {
-    private ActivityEditorBinding bind;
+public class EditorActivity extends AppCompatActivity implements android.support.v4.app.LoaderManager.LoaderCallbacks<Cursor> {
+
+    private static final int PET_LOADER_ID = 0;
+    private ActivityEditorBinding binding;
     /**
      * Gender of the pet. The possible values are:
      * 0 for unknown gender, 1 for male, 2 for female.
      */
-    private int gender;
+
+    private Uri petUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
-        bind = DataBindingUtil.setContentView(this, R.layout.activity_editor);
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_editor);
         setupSpinner();
+
+//        Get uri from intent and change activity title accordingly
+        petUri = getIntent().getData();
+        if (petUri != null) {
+            setTitle(getString(R.string.editor_activity_title_edit_pet));
+            getSupportLoaderManager().initLoader(PET_LOADER_ID, null, this);
+        } else {
+            setTitle(getString(R.string.editor_activity_title_new_pet));
+        }
+
+        // Prepare the loader
+
     }
 
     /**
@@ -64,20 +84,20 @@ public class EditorActivity extends AppCompatActivity {
         genderSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
 
         // Apply the adapter to the spinner
-        bind.spinnerGender.setAdapter(genderSpinnerAdapter);
+        binding.spinnerGender.setAdapter(genderSpinnerAdapter);
 
         // Set the integer mSelected to the constant values
-        bind.spinnerGender.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        binding.spinnerGender.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selection = (String) parent.getItemAtPosition(position);
                 if (!TextUtils.isEmpty(selection)) {
                     if (selection.equals(getString(R.string.gender_male))) {
-                        gender = PetContract.PetEntry.GENDER_MALE; // Male
+                        binding.spinnerGender.setSelection(PetEntry.GENDER_MALE); // Male
                     } else if (selection.equals(getString(R.string.gender_female))) {
-                        gender = PetContract.PetEntry.GENDER_FEMALE; // Female
+                        binding.spinnerGender.setSelection(PetEntry.GENDER_FEMALE); // Female
                     } else {
-                        gender = PetContract.PetEntry.GENDER_UNKNOWN; // Unknown
+                        binding.spinnerGender.setSelection(PetEntry.GENDER_UNKNOWN); // Unknown
                     }
                 }
             }
@@ -85,7 +105,7 @@ public class EditorActivity extends AppCompatActivity {
             // Because AdapterView is an abstract class, onNothingSelected must be defined
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                gender = 0; // Unknown
+                binding.spinnerGender.setSelection(0); // Unknown
             }
         });
     }
@@ -105,7 +125,7 @@ public class EditorActivity extends AppCompatActivity {
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
                 // Save pet to database
-                insertPet();
+                savePet();
                 // Exit activity
                 finish();
                 return true;
@@ -122,20 +142,45 @@ public class EditorActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void insertPet() {
+    private void savePet() {
         // Read from input fields
         // Use trim to eliminate leading or trailing white space
-        String name = bind.editPetName.getText().toString().trim();
-        String breed = bind.editPetBreed.getText().toString().trim();
-        int weight = Integer.parseInt(bind.editPetWeight.getText().toString().trim());
+        String name = binding.editPetName.getText().toString().trim();
+        String breed = binding.editPetBreed.getText().toString().trim();
+        int gender = binding.spinnerGender.getSelectedItemPosition();
+        int weight = Integer.parseInt(binding.editPetWeight.getText().toString().trim());
 
         ContentValues values = new ContentValues();
-        values.put(PetContract.PetEntry.COLUMN_PET_NAME, name);
-        values.put(PetContract.PetEntry.COLUMN_PET_BREED, breed);
-        values.put(PetContract.PetEntry.COLUMN_PET_GENDER, gender);
-        values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT, weight);
+        values.put(PetEntry.COLUMN_PET_NAME, name);
+        values.put(PetEntry.COLUMN_PET_BREED, breed);
+        values.put(PetEntry.COLUMN_PET_GENDER, gender);
+        values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
+
+
+//        If we are in edit mode update pet with new data, else add a new pet.
+        if (petUri != null) {
+            updatePet(values, petUri);
+             } else {
 //        Insert new pet into the database
-        Uri newUri = getContentResolver().insert(PetContract.PetEntry.CONTENT_URI, values);
+            insertPet(values);
+        }
+    }
+
+    private void updatePet (ContentValues values, Uri currentPetURI){
+        int rowsUpdated = getContentResolver().update(currentPetURI, values, null, null);
+        // Show a toast message depending on whether or not the update was successful
+        if ( rowsUpdated == 0) {
+            // If the new content URI is null, then there was an error with update.
+            Toast.makeText(this, getString(R.string.editor_insert_pet_failed),
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            // Otherwise, the update was successful and we can display a toast.
+            Toast.makeText(this, getString(R.string.editor_save_pet_successful),
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+    private void insertPet(ContentValues values) {
+        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
         // Show a toast message depending on whether or not the insertion was successful
         if (newUri == null) {
             // If the new content URI is null, then there was an error with insertion.
@@ -143,8 +188,45 @@ public class EditorActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
         } else {
             // Otherwise, the insertion was successful and we can display a toast.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_successful),
+            Toast.makeText(this, getString(R.string.editor_save_pet_successful),
                     Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @NonNull
+    @Override
+    public android.support.v4.content.Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
+//        Create projection of columns which we are interested in.
+        String[] projection = {PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED,
+                PetEntry.COLUMN_PET_GENDER,
+                PetEntry.COLUMN_PET_WEIGHT};
+
+        // Now create and return a CursorLoader that will take care of
+        // creating a Cursor for the data being displayed.
+        return new CursorLoader(this, petUri,
+                projection,
+                null,
+                null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(@NonNull android.support.v4.content.Loader<Cursor> loader, Cursor cursor) {
+        if (cursor.moveToFirst()) {
+            binding.editPetName.setText(cursor.getString(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_NAME)));
+            binding.editPetBreed.setText(cursor.getString(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_BREED)));
+            binding.spinnerGender.setSelection(cursor.getInt(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_GENDER)));
+            binding.editPetWeight.setText(String.valueOf(cursor.getInt(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_WEIGHT))));
+        }
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull android.support.v4.content.Loader<Cursor> loader) {
+        binding.editPetName.setText("");
+        binding.editPetBreed.setText("");
+        binding.spinnerGender.setSelection(0);
+        binding.editPetWeight.setText("");
     }
 }
