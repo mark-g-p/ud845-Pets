@@ -3,11 +3,13 @@ package com.example.android.pets.data;
 import android.content.Context;
 import android.database.Cursor;
 import android.databinding.DataBindingUtil;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CursorAdapter;
 
+import com.example.android.pets.R;
 import com.example.android.pets.databinding.ListItemBinding;
 
 /**
@@ -59,7 +61,9 @@ public class PetCursorAdapter extends CursorAdapter {
         ListItemBinding binding = DataBindingUtil.getBinding(view);
         if (binding != null) {
             binding.name.setText(cursor.getString(cursor.getColumnIndexOrThrow("name")));
-            binding.summary.setText(cursor.getString(cursor.getColumnIndexOrThrow("breed")));
+//            Show "Unknown breed" if breed is not specified.
+            String breed = cursor.getString(cursor.getColumnIndexOrThrow("breed"));
+            binding.summary.setText(TextUtils.isEmpty(breed) ? context.getString(R.string.unknown_breed) : breed);
         }
         view.setTag(binding);
     }
